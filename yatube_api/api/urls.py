@@ -11,6 +11,6 @@ router.register(r'comments', CommentViewSet)
 router.register(r'posts/(?P<post_pk>\d+)/comments', CommentViewSet)
 
 urlpatterns = [
-        path('', include(router.urls)),
-        path('api-token-auth/', views.obtain_auth_token),
-     ]
+    path('', include(router.urls)),
+    path('api-token-auth/', views.obtain_auth_token),
+]
