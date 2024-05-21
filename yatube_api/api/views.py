@@ -1,7 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from posts.models import Comment, Group, Post
+from posts.models import Group, Post
 from api.serializers import (CommentSerializer, GroupSerializer,
                              PostSerializer, IsAuthorOrReadOnly)
 
@@ -25,12 +27,22 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
     def get_queryset(self):
+        if self.kwargs.get('post_pk') is None:
+            raise NotFound("Post not found.")
+        return self.get_post().comments.all()
+
+    def get_post(self):
         post_id = self.kwargs.get('post_pk')
-        if post_id:
-            return Comment.objects.filter(post_id=post_id)
-        return Comment.objects.none()
+        try:
+            return Post.objects.get(pk=post_id)
+        except Post.DoesNotExist:
+            return None
 
     def perform_create(self, serializer):
-        post_id = self.kwargs.get('post_pk')
-        post = Post.objects.get(pk=post_id)
-        serializer.save(author=self.request.user, post=post)
+        post = self.get_post()
+        if post:
+            serializer.save(author=self.request.user, post=post)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            {"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND
+        )
